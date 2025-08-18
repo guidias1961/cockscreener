@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>cockscreener • PulseChain monitor</title>
+  <meta name="description" content="PulseChain pairs: search, sort, filter. Single-file, responsive."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0c12; --panel:#11131b; --panel2:#0e1017; --text:#e9ebff; --muted:#9aa0a6;
+      --good:#16a34a; --bad:#ef4444; --p1:#8B5CF6; --p2:#00C2FF; --p3:#FF2A6D;
+      --radius:16px; --shadow:0 10px 24px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    html{font-size:14px}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial; color:var(--text);
+      background:
+        radial-gradient(1200px 1200px at -10% -20%, rgba(139,92,246,.15), transparent 60%),
+        radial-gradient(900px 900px at 110% 0%, rgba(0,194,255,.12), transparent 55%),
+        radial-gradient(800px 800px at 50% 120%, rgba(255,42,109,.10), transparent 60%),
+        var(--bg);
+    }
+    a{color:#b3c7ff; text-decoration:none}
+    .wrap{max-width:1400px; margin:0 auto; padding:20px}
+    header{
+      display:flex; gap:16px; align-items:center; justify-content:space-between;
+      padding:12px 16px; border:1px solid #1c2030; border-radius:20px; box-shadow:var(--shadow);
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.15));
+      position:sticky; top:12px; z-index:10; backdrop-filter: blur(8px)
+    }
+    .brand{display:flex; align-items:center; gap:12px}
+    .logo{width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-weight:800; overflow:hidden;
+      background: conic-gradient(from 210deg, var(--p1), var(--p2), var(--p3), var(--p1)); color:#fff}
+    .logo img{width:100%; height:100%; object-fit:cover; display:block}
+    .title{font-weight:800; letter-spacing:.3px; font-size:14px}
+    .hdr-right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .chip{background:#1b1f2c; border:1px solid #23283a; color:#d7dcff; padding:8px 10px; border-radius:10px;
+      display:flex; gap:8px; align-items:center; min-width:260px; font-size:13px}
+    .chip input{background:transparent; border:none; color:var(--text); outline:none; width:100%}
+    .btn{background:linear-gradient(90deg,var(--p1),var(--p2)); color:#0b0c12; border:none; font-weight:800;
+      padding:8px 12px; border-radius:10px; cursor:pointer; font-size:12px}
+    .btn.secondary{background:#1c2030; color:#cbd5ff; border:1px solid #2b3147}
+    .btn.tw{background:#1d9bf0; color:#fff}
+    .grid{margin-top:16px; display:grid; grid-template-columns:300px 1fr; gap:14px}
+    @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.35)); border:1px solid #1c2030; border-radius:var(--radius); box-shadow:var(--shadow)}
+    .side{padding:14px}
+
+    /* KPIs */
+    .kpi{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px}
+    .kpi .card{background:var(--panel2); border:1px solid #1c2030; border-radius:12px; padding:12px 12px 14px; min-height:78px}
+    .kpi .card h4{margin:0 0 6px 0; font-size:10.5px; letter-spacing:.3px; text-transform:uppercase; color:#a9b3d1}
+    .kpi .card .val{font-size:18px; font-weight:800; line-height:1.2; font-variant-numeric:tabular-nums}
+    /* KPIs empilhados no Overview */
+    .side .kpi{grid-template-columns:1fr}
+    .side .kpi .card{min-height:82px}
+
+    .row{display:flex; gap:8px; align-items:center}
+    .group{padding:10px; background:var(--panel2); border:1px solid #1c2030; border-radius:12px; margin-top:10px}
+    .group label{font-size:12px; color:#9aa0a6}
+    .group select,.group input{background:#0d0f17; border:1px solid #23283a; color:var(--text); padding:8px 10px; border-radius:10px; width:100%}
+    .tabs{display:flex; gap:6px; padding:8px; border-bottom:1px solid #202537}
+    .tab{padding:8px 10px; border-radius:10px; background:#161a26; border:1px solid #23283a; cursor:pointer; font-weight:600; color:#cbd5ff; font-size:12px}
+    .tab.active{background:linear-gradient(90deg, rgba(139,92,246,.25), rgba(0,194,255,.25)); border-color:#2f385a}
+
+    .table{
+      width:100%; border-collapse:separate; border-spacing:0 8px; padding:10px;
+      /* malha única para header e linhas (mesmo valor em ambos) */
+      --cols: 40px minmax(0,2.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.8fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,.8fr) minmax(0,1.1fr);
+    }
+
+    /* grade da tabela */
+    .thead,.trow{
+      display:grid; gap:8px; align-items:center; font-size:13px;
+      grid-template-columns: var(--cols);
+      padding:8px 10px;
+    }
+    .thead{color:#95a0c0; font-size:11.5px}
+    .thead > div{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+    /* alinhar header das colunas numéricas à direita */
+    .thead > :is(:nth-child(3),:nth-child(5),:nth-child(6),:nth-child(7),:nth-child(8),:nth-child(9),:nth-child(10),:nth-child(11),:nth-child(12)){
+      text-align:right;
+    }
+
+    .trow{
+      background:var(--panel2); border:1px solid #1c2030; border-radius:12px;
+      transition:transform .12s ease, background .12s; position:relative; overflow:hidden
+    }
+    .trow:hover{transform:translateY(-2px); background:#141824}
+
+    .pair{display:flex; align-items:center; gap:8px; min-width:0}
+    .pair img{width:22px; height:22px; border-radius:6px; object-fit:cover; background:#1b2133; flex:0 0 auto}
+    .pair .sym{font-weight:700; font-size:clamp(11px,1vw,13px); line-height:1.15}
+    .pair .meta{color:#9fb0ff; font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+    /* alinhar colunas numéricas das LINHAS como no header */
+    .trow > :is(:nth-child(3),:nth-child(5),:nth-child(6),:nth-child(7),:nth-child(8),:nth-child(9),:nth-child(10),:nth-child(11),:nth-child(12)){
+      text-align:right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .num{font-variant-numeric:tabular-nums}
+    .chg{font-weight:700}
+    .chg.pos{color:var(--good)} .chg.neg{color:var(--bad)}
+    .spark{display:block; width:100%; height:30px}
+
+    .actions{display:flex; gap:8px; justify-content:flex-end; align-items:center; flex-wrap:wrap; min-width:0}
+    .pill{display:inline-block; padding:6px 10px; background:#1a2032; border:1px solid #2a3350; border-radius:10px; font-size:11.5px; color:#c6d1ff; white-space:nowrap; line-height:1.1}
+    .pill:hover{filter:brightness(1.05)}
+
+    .muted{color:var(--muted)}
+    .foot{display:flex; gap:8px; align-items:center; justify-content:space-between; padding:10px}
+    .badge{font-size:11px; padding:4px 8px; border-radius:999px; background:linear-gradient(90deg,var(--p2),var(--p1)); color:#081018; font-weight:700}
+
+    /* breakpoints: mantêm header e linhas na mesma malha */
+    @media (max-width:1200px){
+      .table{
+        --cols: 40px minmax(0,2.8fr) minmax(0,1.2fr) minmax(0,1.2fr) 0 0 minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.2fr) 0 minmax(0,1fr) minmax(0,1.3fr);
+      }
+      .hide-xl{display:none}
+    }
+    @media (max-width:900px){
+      .table{
+        --cols: 40px minmax(0,3.4fr) minmax(0,1.6fr) 0 0 0 minmax(0,1.2fr) minmax(0,1.6fr) 0 0 minmax(0,1.1fr) minmax(0,1.6fr);
+      }
+      .hide-lg,.hide-xl{display:none}
+    }
+    @media (max-width:700px){
+      .table{
+        --cols: 40px minmax(0,3.6fr) minmax(0,1.8fr) 0 0 0 minmax(0,1.2fr) 0 0 0 0 minmax(0,1.8fr);
+      }
+      .hide-md,.hide-lg,.hide-xl{display:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo"><img src="logo.png" alt="" onerror="this.style.display='none'"/></div>
+        <div>
+          <div class="title">cockscreener</div>
+          <div class="muted" style="font-size:12px">PulseChain pair monitor</div>
+        </div>
+      </div>
+      <div class="hdr-right">
+        <div class="chip">🔎 <input id="q" placeholder="Search symbol, token or 0x address"/></div>
+        <button class="btn" id="doSearch">Search</button>
+        <button class="btn secondary" id="reset">Reset</button>
+        <a class="btn tw" id="tw" href="https://twitter.com/yourprofile" target="_blank" rel="noreferrer">Twitter</a>
+        <span class="badge">PulseChain</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <aside class="panel side">
+        <h3>Overview</h3>
+        <div class="kpi">
+          <div class="card"><h4>Listed Pairs</h4><div class="val" id="k-pairs">0</div></div>
+          <div class="card"><h4>24h Volume</h4><div class="val" id="k-vol">$0</div></div>
+          <div class="card"><h4>Liquidity</h4><div class="val" id="k-liq">$0</div></div>
+        </div>
+        <div class="group">
+          <label>Sort by</label>
+          <div class="row">
+            <select id="sortBy">
+              <option value="volume.h24">Volume 24h</option>
+              <option value="liquidity.usd">Liquidity</option>
+              <option value="priceChange.h24">Change 24h</option>
+              <option value="txns.h24">Txns 24h</option>
+              <option value="pairCreatedAt">Newest</option>
+            </select>
+          </div>
+        </div>
+        <div class="group">
+          <label>Filters</label>
+          <div class="row"><input id="minLiq" type="number" placeholder="Min Liquidity USD"/></div>
+          <div class="row"><input id="minVol" type="number" placeholder="Min Volume 24h USD"/></div>
+          <div class="row"><select id="dexFilter"><option value="">All DEXes</option></select></div>
+        </div>
+        <div class="group">
+          <label>Quick actions</label>
+          <div class="row" style="gap:6px; flex-wrap:wrap">
+            <button class="btn secondary" id="qaTop">Top</button>
+            <button class="btn secondary" id="qaGainers">Gainers</button>
+            <button class="btn secondary" id="qaNew">New Pairs</button>
+            <button class="btn secondary" id="clearFilters">Clear Filters</button>
+          </div>
+        </div>
+        <div class="group">
+          <label>Helpful</label>
+          <a class="linkish" href="https://scan.pulsechain.com/" target="_blank" rel="noreferrer">PulseChain Explorer</a>
+        </div>
+      </aside>
+
+      <main class="panel">
+        <div class="tabs" id="tabs">
+          <div class="tab active" data-mode="top">Top</div>
+          <div class="tab" data-mode="gainers">Gainers</div>
+          <div class="tab" data-mode="new">New Pairs</div>
+        </div>
+
+        <div class="table">
+          <div class="thead">
+            <div>#</div>
+            <div>Token / Pair</div>
+            <div>Price</div>
+            <div>Trend</div>
+            <div class="hide-lg">5m</div>
+            <div class="hide-lg">1h</div>
+            <div>24h</div>
+            <div class="hide-md">24h Vol</div>
+            <div class="hide-md">Liquidity</div>
+            <div class="hide-xl">FDV</div>
+            <div>Txns 24h</div>
+            <div>Actions</div>
+          </div>
+          <div id="rows" style="display:grid; gap:8px; margin-top:6px"></div>
+        </div>
+
+        <div class="foot">
+          <div class="muted">Live list. Click any row for details.</div>
+          <div class="muted">© cockscreener.</div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://api.dexscreener.com';
+    const REFRESH_MS = 30000;
+
+    const el = id => document.getElementById(id);
+    const rowsEl = el('rows');
+    const dexFilterEl = el('dexFilter');
+    const sortByEl = el('sortBy');
+    const minLiqEl = el('minLiq');
+    const minVolEl = el('minVol');
+    const qEl = el('q');
+
+    let state = { mode:'top', allPairs:[], filtered:[], priceSeries:new Map(), timer:null, lastQueryList:[] };
+
+    const fmtUSD = n => {
+      if (n == null || isNaN(n)) return '$0';
+      const v = Number(n);
+      if (v >= 1e9) return '$' + (v/1e9).toFixed(2) + 'B';
+      if (v >= 1e6) return '$' + (v/1e6).toFixed(2) + 'M';
+      if (v >= 1e3) return '$' + (v/1e3).toFixed(2) + 'K';
+      if (v >= 1)   return '$' + v.toLocaleString(undefined,{maximumFractionDigits:2});
+      if (v === 0)  return '$0';
+      return '$' + v.toFixed(6);
+    };
+    const fmtInt = n => n ? Number(n).toLocaleString() : '0';
+    const toNum = v => v == null ? null : Number(v);
+    const cssChg = v => v==null ? '' : (v>=0 ? 'chg pos' : 'chg neg');
+    const fmtChg = v => v==null ? '—' : ((v>=0?'+':'') + v.toFixed(2) + '%');
+    const isAddr = s => /^0x[a-fA-F0-9]{40}$/.test((s||'').trim());
+    const chainOk = c => (c||'').toLowerCase().includes('pulse');
+
+    async function searchQ(q){
+      const url = `${API}/latest/dex/search?q=${encodeURIComponent(q)}`;
+      const r = await fetch(url, {headers:{'Accept':'application/json'}});
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    }
+    async function tokenPairs(chainId, token){
+      const url = `${API}/tokens/v1/${chainId}/${token}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    }
+    async function fetchPair(chainId, pairAddr){
+      const url = `${API}/latest/dex/pairs/${chainId}/${pairAddr}`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    }
+
+    function dedupePairs(list){
+      const m = new Map();
+      for (const p of list){
+        const k = p.pairAddress || `${p.chainId}:${p.baseToken?.address}:${p.quoteToken?.address}`;
+        if (!m.has(k)) m.set(k, p);
+      }
+      return [...m.values()];
+    }
+
+    async function loadDefault(){
+      const enrich = ['a','e','i','o','u','wpls','usdc','hex'];
+      const queries = ['chain:pulsechain','pulsechain', ...enrich.map(x => `${x} chain:pulsechain`)];
+      state.lastQueryList = queries.slice();
+      const results = await Promise.allSettled(queries.map(searchQ));
+      let pairs = [];
+      for (const r of results){
+        if (r.status === 'fulfilled'){
+          const arr = Array.isArray(r.value?.pairs) ? r.value.pairs : [];
+          pairs.push(...arr);
+        }
+      }
+      pairs = pairs.filter(p => chainOk(p?.chainId));
+      return dedupePairs(pairs);
+    }
+
+    async function loadFromInput(raw){
+      if (isAddr(raw)){
+        const chain = 'pulsechain';
+        const out = [];
+        try{ const a = await tokenPairs(chain, raw); if (Array.isArray(a)) out.push(...a); }catch(_){}
+        try{ const b = await fetchPair(chain, raw); if (Array.isArray(b?.pairs)) out.push(...b.pairs); }catch(_){}
+        return dedupePairs(out.filter(p=>chainOk(p?.chainId)));
+      }
+      const q = [`${raw} chain:pulsechain`, `${raw} pulsechain`, raw];
+      state.lastQueryList = q.slice();
+      const results = await Promise.allSettled(q.map(searchQ));
+      let pairs = [];
+      for (const r of results){
+        if (r.status==='fulfilled'){
+          const arr = Array.isArray(r.value?.pairs) ? r.value.pairs : [];
+          pairs.push(...arr);
+        }
+      }
+      return dedupePairs(pairs.filter(p=>chainOk(p?.chainId)));
+    }
+
+    function getMetric(p, key){
+      switch(key){
+        case 'volume.h24': return toNum(p?.volume?.h24)||0;
+        case 'liquidity.usd': return toNum(p?.liquidity?.usd)||0;
+        case 'priceChange.h24': return toNum(p?.priceChange?.h24)||-1e9;
+        case 'txns.h24': return (toNum(p?.txns?.h24?.buys)||0) + (toNum(p?.txns?.h24?.sells)||0);
+        case 'pairCreatedAt': return toNum(p?.pairCreatedAt)||0;
+        default: return 0;
+      }
+    }
+
+    function applyFiltersAndRender(){
+      const minL = Number(minLiqEl.value||0);
+      const minV = Number(minVolEl.value||0);
+      const dex  = dexFilterEl.value||'';
+
+      let list = state.allPairs.slice();
+
+      let primaryKey = sortByEl.value;
+      if (state.mode === 'gainers') primaryKey = 'priceChange.h24';
+      if (state.mode === 'new')     primaryKey = 'pairCreatedAt';
+
+      list.sort((a,b)=>{
+        const d = getMetric(b, primaryKey) - getMetric(a, primaryKey);
+        if (d !== 0) return d;
+        return getMetric(b,'volume.h24') - getMetric(a,'volume.h24');
+      });
+
+      list = list.filter(p => (toNum(p?.liquidity?.usd)||0) >= minL);
+      list = list.filter(p => (toNum(p?.volume?.h24)||0) >= minV);
+      if (dex) list = list.filter(p => (p.dexId||'')===dex);
+
+      state.filtered = list;
+      renderRows(list);
+    }
+
+    function renderRows(list){
+      if (!list.length){
+        rowsEl.innerHTML = `<div class="trow" style="grid-template-columns:1fr"><div>No results.</div></div>`;
+        return;
+      }
+      rowsEl.innerHTML = '';
+      list.forEach((p, i) => {
+        const price = toNum(p.priceUsd);
+        const ch5  = toNum(p?.priceChange?.m5);
+        const ch1  = toNum(p?.priceChange?.h1);
+        const ch24 = toNum(p?.priceChange?.h24);
+        const vol24= toNum(p?.volume?.h24);
+        const liq  = toNum(p?.liquidity?.usd);
+        const fdv  = toNum(p?.fdv) ?? toNum(p?.marketCap);
+        const tx24 = (toNum(p?.txns?.h24?.buys)||0)+(toNum(p?.txns?.h24?.sells)||0);
+
+        const base = p.baseToken || {};
+        const quote= p.quoteToken || {};
+        const img  = p?.info?.imageUrl || '';
+        const dexId = p.dexId || '';
+        const pairAddr = p.pairAddress || '';
+        const explorerPair = pairAddr ? `https://scan.pulsechain.com/address/${pairAddr}` : '#';
+        const explorerBase = base.address ? `https://scan.pulsechain.com/address/${base.address}` : '#';
+
+        const row = document.createElement('div');
+        row.className = 'trow';
+        row.innerHTML = `
+          <div class="num">${i+1}</div>
+          <div class="pair">
+            <img src="${img}" alt="">
+            <div style="min-width:0">
+              <div class="sym">${base.symbol||'—'} / ${quote.symbol||'—'}</div>
+              <div class="meta">${base.name||'—'} • ${dexId||'—'} • PulseChain</div>
+            </div>
+          </div>
+          <div class="num">${price==null?'—':('$'+Number(price).toLocaleString(undefined,{maximumFractionDigits:6}))}</div>
+          <div><canvas class="spark"></canvas></div>
+          <div class="${cssChg(ch5)} hide-lg">${fmtChg(ch5)}</div>
+          <div class="${cssChg(ch1)} hide-lg">${fmtChg(ch1)}</div>
+          <div class="${cssChg(ch24)}">${fmtChg(ch24)}</div>
+          <div class="num hide-md">${fmtUSD(vol24)}</div>
+          <div class="num hide-md">${fmtUSD(liq)}</div>
+          <div class="num hide-xl">${fdv?fmtUSD(fdv):'—'}</div>
+          <div class="num">${fmtInt(tx24)}</div>
+          <div class="actions">
+            <a class="pill" href="${explorerBase}" target="_blank" rel="noreferrer">Base token</a>
+            <a class="pill" href="${explorerPair}" target="_blank" rel="noreferrer">Pair contract</a>
+          </div>
+        `;
+        rowsEl.appendChild(row);
+
+        const spark = row.querySelector('.spark');
+        if (spark){
+          if (!state.priceSeries.has(pairAddr)) state.priceSeries.set(pairAddr, []);
+          if (price!=null){
+            const arr = state.priceSeries.get(pairAddr);
+            arr.push(Number(price));
+            if (arr.length>60) arr.shift();
+            drawSparkline(spark, arr);
+          }
+        }
+
+        row.style.cursor='pointer';
+        row.addEventListener('click', (e)=>{
+          if (e.target.closest('.actions')) return;
+          showDetail(p);
+        });
+      });
+    }
+
+    function drawSparkline(canvas, values){
+      if (!values || values.length<2) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width = canvas.clientWidth;
+      const H = canvas.height = canvas.clientHeight;
+      const min = Math.min(...values), max = Math.max(...values);
+      const pad = 4;
+      ctx.clearRect(0,0,W,H);
+      const grad = ctx.createLinearGradient(0,0,W,0);
+      grad.addColorStop(0,'#8B5CF6'); grad.addColorStop(.5,'#00C2FF'); grad.addColorStop(1,'#FF2A6D');
+      ctx.lineWidth = 2; ctx.strokeStyle = grad; ctx.beginPath();
+      values.forEach((v,i)=>{
+        const x = pad + (W-2*pad) * (i/(values.length-1));
+        const y = H - pad - (H-2*pad) * ((v-min)/(max-min||1));
+        if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+    }
+
+    function showDetail(p){
+      const w = document.createElement('div');
+      w.style.cssText = `position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.45); z-index:1000;`;
+      const base = p.baseToken||{}, quote=p.quoteToken||{};
+      const tx24 = (toNum(p?.txns?.h24?.buys)||0)+(toNum(p?.txns?.h24?.sells)||0);
+      const buys = (toNum(p?.txns?.h24?.buys)||0), sells=(toNum(p?.txns?.h24?.sells)||0);
+      w.innerHTML = `
+        <div class="panel" style="width:min(720px,92vw); padding:16px; position:relative;">
+          <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px">
+            <img src="${p?.info?.imageUrl||''}" alt="" style="width:34px;height:34px;border-radius:10px; background:#1b2133">
+            <div>
+              <div style="font-weight:800; font-size:13px">${base.symbol||'—'} / ${quote.symbol||'—'} <span class="muted" style="font-weight:600">on ${p.dexId||'—'}</span></div>
+              <div class="muted" style="font-size:11.5px">${base.name||'—'} • PulseChain</div>
+            </div>
+            <button class="btn secondary" style="margin-left:auto" onclick="this.closest('div[style*=&quot;position:fixed&quot;]').remove()">Close</button>
+          </div>
+          <div class="kpi">
+            <div class="card"><h4>Price</h4><div class="val">${p.priceUsd?('$'+Number(p.priceUsd).toLocaleString(undefined,{maximumFractionDigits:6})):'—'}</div></div>
+            <div class="card"><h4>Liquidity</h4><div class="val">${fmtUSD(toNum(p?.liquidity?.usd))}</div></div>
+            <div class="card"><h4>FDV</h4><div class="val">${p.fdv?fmtUSD(p.fdv):'—'}</div></div>
+          </div>
+          <div class="kpi">
+            <div class="card"><h4>5m</h4><div class="val ${cssChg(toNum(p?.priceChange?.m5))}">${fmtChg(toNum(p?.priceChange?.m5))}</div></div>
+            <div class="card"><h4>1h</h4><div class="val ${cssChg(toNum(p?.priceChange?.h1))}">${fmtChg(toNum(p?.priceChange?.h1))}</div></div>
+            <div class="card"><h4>24h</h4><div class="val ${cssChg(toNum(p?.priceChange?.h24))}">${fmtChg(toNum(p?.priceChange?.h24))}</div></div>
+          </div>
+          <div class="kpi">
+            <div class="card"><h4>Txns 24h</h4><div class="val">${fmtInt(tx24)} <span class="muted" style="font-size:11.5px">(B:${fmtInt(buys)} S:${fmtInt(sells)})</span></div></div>
+            <div class="card"><h4>DEX</h4><div class="val">${p.dexId||'—'}</div></div>
+            <div class="card"><h4>Pair age</h4><div class="val">${p.pairCreatedAt ? timeSince(p.pairCreatedAt) : '—'}</div></div>
+          </div>
+        </div>
+      `;
+      w.addEventListener('click', (e)=>{ if (e.target===w) w.remove(); });
+      document.body.appendChild(w);
+    }
+    function timeSince(ms){
+      const d = Date.now() - Number(ms||0);
+      const m = Math.floor(d/60000), h = Math.floor(m/60), dd = Math.floor(h/24);
+      if (dd>0) return dd+'d';
+      if (h>0) return h+'h';
+      if (m>0) return m+'m';
+      return 'now';
+    }
+
+    function setMode(mode){
+      state.mode = mode;
+      document.querySelectorAll('#tabs .tab').forEach(t=>{
+        t.classList.toggle('active', t.dataset.mode === mode);
+      });
+      applyFiltersAndRender();
+    }
+    document.querySelectorAll('#tabs .tab').forEach(t=> t.addEventListener('click', ()=> setMode(t.dataset.mode)));
+    document.getElementById('qaTop').addEventListener('click', ()=> setMode('top'));
+    document.getElementById('qaGainers').addEventListener('click', ()=> setMode('gainers'));
+    document.getElementById('qaNew').addEventListener('click', ()=> setMode('new'));
+
+    sortByEl.addEventListener('change', applyFiltersAndRender);
+    dexFilterEl.addEventListener('change', applyFiltersAndRender);
+    minLiqEl.addEventListener('input', applyFiltersAndRender);
+    minVolEl.addEventListener('input', applyFiltersAndRender);
+    document.getElementById('clearFilters').addEventListener('click', ()=>{
+      dexFilterEl.value=''; minLiqEl.value=''; minVolEl.value='';
+      sortByEl.value='volume.h24';
+      applyFiltersAndRender();
+    });
+
+    document.getElementById('doSearch').addEventListener('click', async ()=>{
+      try{
+        const raw = qEl.value.trim();
+        const pairs = raw ? await loadFromInput(raw) : await loadDefault();
+        state.allPairs = pairs;
+        computeKPIs(pairs);
+        populateDexFilter(pairs);
+        applyFiltersAndRender();
+      }catch(e){
+        rowsEl.innerHTML = `<div class="trow" style="grid-template-columns:1fr"><div>Failed to load data.</div></div>`;
+      }
+    });
+    document.getElementById('reset').addEventListener('click', async ()=>{
+      qEl.value='';
+      const pairs = await loadDefault();
+      state.allPairs = pairs;
+      computeKPIs(pairs);
+      populateDexFilter(pairs);
+      applyFiltersAndRender();
+    });
+    qEl.addEventListener('keydown', (e)=>{ if (e.key==='Enter') document.getElementById('doSearch').click(); });
+
+    function computeKPIs(pairs){
+      const vol = pairs.reduce((a,p)=> a + (toNum(p?.volume?.h24)||0), 0);
+      const liq = pairs.reduce((a,p)=> a + (toNum(p?.liquidity?.usd)||0), 0);
+      document.getElementById('k-pairs').textContent = pairs.length.toString();
+      document.getElementById('k-vol').textContent = fmtUSD(vol);
+      document.getElementById('k-liq').textContent = fmtUSD(liq);
+    }
+    function populateDexFilter(pairs){
+      const dexes = [...new Set(pairs.map(p=>p.dexId).filter(Boolean))].sort();
+      dexFilterEl.innerHTML = `<option value="">All DEXes</option>` + dexes.map(d=>`<option value="${d}">${d}</option>`).join('');
+    }
+
+    async function boot(){
+      try{
+        const pairs = await loadDefault();
+        state.allPairs = pairs;
+        computeKPIs(pairs);
+        populateDexFilter(pairs);
+        applyFiltersAndRender();
+        clearInterval(state.timer);
+        state.timer = setInterval(async ()=>{
+          try{
+            const raw = qEl.value.trim();
+            const p = raw ? await loadFromInput(raw) : await loadDefault();
+            state.allPairs = p;
+            computeKPIs(p);
+            populateDexFilter(p);
+            applyFiltersAndRender();
+          }catch(_){}
+        }, REFRESH_MS);
+      }catch(_){
+        rowsEl.innerHTML = `<div class="trow" style="grid-template-columns:1fr"><div>Failed to load data.</div></div>`;
+      }
+    }
+    boot();
+  </script>
+</body>
+</html>
+
